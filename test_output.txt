@@ -1,0 +1,43 @@
+ruby 3.3.6 (2024-11-05 revision 75015d4c1f) [x86_64-linux]
+
+== 1. Schema injection & strip (acceptance criteria 1 & 2) ==
+  PASS track() attaches to an official mcp gem server and returns the tracked instance  — MCP::Server
+  PASS injected session_id and context appear in tools/list  — properties: city, session_id, context
+  PASS get_more_tools is registered and listed
+  PASS customer handler runs and returns the correct result  — Sunny in Berkeley, 22C
+  PASS customer handler NEVER sees injected parameters (a handler seeing session_id is a failing test)  — handler saw keys: [[:city, :server_context], [:city, :server_context]]
+
+== 2. Session lifecycle end to end (acceptance criterion 3) ==
+  PASS first call mints a session id via [MCP INSTRUCTIONS] trailing block  — minted ses_3ISPcX6WvZijSKwOQmIBfk1cOeA.5911bce9fa
+  PASS mint-back also lands in structuredContent._mcp_instructions
+  PASS echoed session id is accepted silently (no re-mint block)
+  PASS an id we never issued is rejected with a re-issue instruction, never adopted
+  PASS rejection still returns the customer's correct tool result
+  PASS events for these calls were delivered to the collector  — 4 unique events delivered
+
+== 3. Fault containment & latency (acceptance criterion 4) ==
+  PASS collector unreachable: tool call still returns the correct result
+  PASS both hooks raising: tool call still returns the correct result
+  PASS queue saturated at 600 events vs capacity 50: publish never raises, oldest dropped, newest kept  — 550 oldest dropped silently
+  PASS blackholed collector adds no request-path latency (p95 healthy vs p95 blackholed)  — p95 healthy=0.27ms, p95 blackholed=0.23ms
+
+== 4. Fork safety — real Process.fork, Puma-cluster shaped (acceptance criterion 5) ==
+  PASS events published from forked workers still arrive (both children delivered)  — publisher pids seen: [2591, 2646, 2649]
+  PASS master keeps delivering after the fork  — master events: 2
+  PASS child delivered all 3 of its events (no silent stop)  — per-child counts: [3, 3]
+
+== 5. Stable event identity & retry classification (fixes TS SDK issue #65) ==
+  PASS ambiguous timeout (request arrived, response lost): retry carries the SAME event id  — 2 requests, 1 unique id
+  PASS collector dedupes by id: exactly one stored event, zero duplicates  — stored=1
+  PASS HTTP 400 is a permanent failure: exactly one attempt, never retried  — 1 request(s)
+  PASS HTTP 500,500,200: retried with exponential backoff until delivered  — 3 attempts, delivered=1
+
+== 6. Truncation & redaction limits (acceptance criterion 6) ==
+  PASS strings truncate at 32KB  — 32780 chars
+  PASS depth capped at 10
+  PASS breadth capped at 100 keys  — 101 keys kept
+  PASS 100KB event cap enforced by progressive shrinking, event kept, not dropped  — 82964 bytes
+  PASS redact_sensitive_information hook runs over event text and scrubs secrets
+
+== Summary ==
+27/27 checks passed

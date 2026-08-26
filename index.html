@@ -223,6 +223,17 @@ footer .meow{font-family:var(--disp);color:var(--muted);font-size:13px;margin-bo
 footer p{max-width:88ch;margin-bottom:6px}
 .codebox{background:var(--inset);border:1px solid var(--line);border-radius:6px;padding:13px;font-family:var(--mono);font-size:12.3px;line-height:1.7;overflow-x:auto;color:var(--muted)}
 .codebox .k{color:var(--accent)} .codebox .s{color:var(--ok)} .codebox .c{color:var(--faint)} .codebox .w{color:var(--ink)}
+
+/* mobile: keep the fork stage boxes apart on narrow screens */
+@media(max-width:600px){
+  .procbox{width:116px;font-size:10px;padding:7px 8px}
+  .thread{font-size:9px}
+  #collector{right:8px}
+  #master,#w1,#w2{left:8px}
+  .stage{padding:10px;min-height:300px}
+  .lrow .t{width:44px}.lrow .pid{width:64px}
+  .codeview{font-size:10.5px}
+}
 </style>
 </head>
 <body>
@@ -1607,6 +1618,16 @@ bPublish.addEventListener("click",function(){
     shoot(document.getElementById("w1"),ok,i*420);
     shoot(document.getElementById("w2"),ok,210+i*420);
   }
+  /* reconcile totals even if the browser throttles animation timers
+     (minimized or occluded window) — the simulation's outcome is
+     deterministic: 6 worker events + the boot event */
+  var expectDelivered = ok ? delivered+6-0 : delivered;
+  setTimeout(function(){
+    if(simState!==3) return;
+    if(ok){ delivered=Math.max(delivered,7); lost=0; }
+    else { lost=Math.max(lost,6); }
+    setStats();
+  }, 3400);
   if(ok){
     led("pid 2646","published 3/3 · all arrived","ok");
     led("pid 2649","published 3/3 · all arrived","ok");
